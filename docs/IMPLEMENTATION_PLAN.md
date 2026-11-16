@@ -46,4 +46,4 @@ World owns policy docs, regions, limit snapshots, loot/spawn profiles and histor
 - Do not deploy to production or change live server configuration during repository planning.
 
 ## Current readiness
-Versioned observe-only policy validation and read-only diff are implemented with eight offline unit tests. No ATLAS runtime hooks or policy enforcement are enabled. GridForge's authoritative map schema and isolated adapter verification remain required before spatial or gameplay features.
+Versioned observe-only policy validation and read-only diff are implemented with ten offline unit tests. No ATLAS runtime hooks or policy enforcement are enabled. GridForge's authoritative map schema and isolated adapter verification remain required before spatial or gameplay features.
