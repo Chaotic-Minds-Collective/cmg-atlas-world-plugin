@@ -21,17 +21,18 @@ World/grid policy management for configurable gameplay rules.
 World owns policy docs, regions, limit snapshots, loot/spawn profiles and history. Core owns server identity, authorization and generic plugin configuration.
 
 ## Milestones
-1. Define declarative policy schema
-2. Implement config import/export, dry-run and audit
-3. Observe structure/tame limits before enforcement
-4. Add safe zones/ownership after spatial hooks verified
-5. Add loot/spawn config with rollback
-6. Add scheduled policies and cross-grid checks
+1. **Define declarative policy schema — first version completed.** `schemaVersion: 1` validates cluster/grid/server scope, observe-only mode, structure/tame limits, PvP schedules, safe-zone references and ownership metadata.
+2. **Implement dry-run diff — initial read-only slice completed.** `diffWorldPolicies` requires identical scope and policy identity plus a higher revision. Import/export and audit persistence remain pending.
+3. Observe structure/tame limits before enforcement — pending verified adapter telemetry.
+4. Add safe zones/ownership after spatial hooks verified — pending GridForge region schema and isolated runtime hooks.
+5. Add loot/spawn config with rollback — pending authoritative item/creature identifiers and verified hooks.
+6. Add scheduled policies and cross-grid checks — pending Core scheduling and GridForge topology contracts.
 
 ## Technical gates and risks
-- Collision/ownership/loot/spawn may require native hooks/client assets
-- Start observe-only; enforcement reversible
-- No live world changes without separate approval
+- The World policy schema is CMG-owned policy data, not a guessed native ATLAS grid JSON schema.
+- Collision/ownership/loot/spawn may require native hooks/client assets.
+- Start observe-only; enforcement must remain disabled until exact server build and feature hooks pass isolated validation.
+- No live world changes without separate approval.
 
 ## Shared engineering requirements
 - Use authenticated, least-privilege Core APIs; no direct database credentials in plugins.
@@ -45,4 +46,4 @@ World owns policy docs, regions, limit snapshots, loot/spawn profiles and histor
 - Do not deploy to production or change live server configuration during repository planning.
 
 ## Current readiness
-Documentation and planning scaffold. Exact ATLAS server build, loader, SDK, callbacks and feature-specific capabilities require isolated reproducible validation.
+Versioned observe-only policy validation and read-only diff are implemented with ten offline unit tests. No ATLAS runtime hooks or policy enforcement are enabled. GridForge's authoritative map schema and isolated adapter verification remain required before spatial or gameplay features.
