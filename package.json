@@ -1,0 +1,17 @@
+{
+  "name": "@chaotic-minds-gaming/atlas-world",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Versioned, observe-only world policy schema and dry-run diff for CMG ATLAS.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    ".": "./src/world-policy.js"
+  },
+  "scripts": {
+    "check": "node --check src/world-policy.js && node --check test/world-policy.test.js",
+    "test": "node --test"
+  }
+}
