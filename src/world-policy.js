@@ -72,6 +72,15 @@ function validateLimits(value, path) {
   return Object.freeze(result);
 }
 
+function mapDense(value, path, mapper) {
+  const result = [];
+  for (let index = 0; index < value.length; index += 1) {
+    if (!Object.hasOwn(value, index)) fail(path + " must not contain missing array entries", path + "[" + index + "]", "SPARSE_ARRAY");
+    result.push(mapper(value[index], index));
+  }
+  return result;
+}
+
 function validateTime(value, path) {
   const result = string(value, path, { min: 5, max: 5 });
   if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(result)) fail(path + " must use HH:MM 24-hour time", path);
@@ -82,13 +91,13 @@ function validateSchedule(value, path) {
   if (!Array.isArray(value) || value.length === 0 || value.length > 64) {
     fail(path + " must be a non-empty array with at most 64 windows", path);
   }
-  return Object.freeze(Array.from(value, (entry, index) => {
+  return Object.freeze(mapDense(value, path, (entry, index) => {
     const entryPath = path + "[" + index + "]";
     object(entry, entryPath, ["daysOfWeek", "startTime", "endTime", "timezone"], ["daysOfWeek", "startTime", "endTime", "timezone"]);
     if (!Array.isArray(entry.daysOfWeek) || entry.daysOfWeek.length === 0 || entry.daysOfWeek.length > 7) {
       fail(entryPath + ".daysOfWeek must contain one to seven weekdays", entryPath + ".daysOfWeek");
     }
-    const days = Array.from(entry.daysOfWeek, (day, dayIndex) => integer(day, entryPath + ".daysOfWeek[" + dayIndex + "]", 0, 6));
+    const days = mapDense(entry.daysOfWeek, entryPath + ".daysOfWeek", (day, dayIndex) => integer(day, entryPath + ".daysOfWeek[" + dayIndex + "]", 0, 6));
     if (new Set(days).size !== days.length) fail(entryPath + ".daysOfWeek must not contain duplicates", entryPath + ".daysOfWeek");
     const startTime = validateTime(entry.startTime, entryPath + ".startTime");
     const endTime = validateTime(entry.endTime, entryPath + ".endTime");
@@ -117,7 +126,7 @@ function validateWorldRules(value) {
 function validateSafeZones(value) {
   if (!Array.isArray(value) || value.length > 500) fail("safeZones must be an array with at most 500 entries", "safeZones");
   const ids = new Set();
-  return Object.freeze(Array.from(value, (entry, index) => {
+  return Object.freeze(mapDense(value, "safeZones", (entry, index) => {
     const path = "safeZones[" + index + "]";
     object(entry, path, ["id", "name", "regionRef", "behavior", "enabled"], ["id", "name", "regionRef", "behavior", "enabled"]);
     const id = uuid(entry.id, path + ".id");
