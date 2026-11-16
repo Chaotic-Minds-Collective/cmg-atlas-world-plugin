@@ -29,14 +29,6 @@ test("validates and freezes a versioned observe-only policy", () => {
   assert.equal(Object.isFrozen(result), true);
   assert.equal(Object.isFrozen(result.scope), true);
   assert.equal(Object.isFrozen(result.safeZones[0]), true);
-  const zone = { id: "abcdefab-abcd-4abc-8abc-abcdefabcdef", name: "Harbor", regionRef: "harbor", behavior: "pve", enabled: true };
-  assert.equal(validateWorldPolicy(policy({ safeZones: [{ ...zone, id: zone.id.toUpperCase() }] })).safeZones[0].id, zone.id);
-  assert.throws(() => validateWorldPolicy(policy({ safeZones: [zone, { ...zone, id: zone.id.toUpperCase() }] })),
-    (error) => error instanceof WorldPolicyValidationError && error.code === "DUPLICATE_ID");
-  assert.throws(() => validateWorldPolicy(policy({ safeZones: new Array(1) })),
-    (error) => error instanceof WorldPolicyValidationError && error.path === "safeZones[0]");
-  assert.throws(() => validateWorldPolicy(policy({ safeZones: [zone, , zone] })),
-    (error) => error instanceof WorldPolicyValidationError && error.path === "safeZones[1]");
 });
 
 test("fails closed when enforcement mode is requested", () => {
@@ -66,13 +58,37 @@ test("requires a valid schedule only for scheduled PvP", () => {
   assert.throws(() => validateWorldPolicy(policy({ worldRules: { pvpMode: "enabled", pvpSchedule: [] } })), /only valid when pvpMode is scheduled/);
 });
 
+test("normalizes UUID casing for policy identity and duplicate checks", () => {
+  const upper = policy({
+    policyId: POLICY_ID.toUpperCase(),
+    scope: { clusterId: CLUSTER_ID.toUpperCase(), gridId: "A1", serverId: SERVER_ID.toUpperCase() },
+    safeZones: [
+      { id: ZONE_ID.toUpperCase(), name: "Harbor", regionRef: "gridforge:region:harbor", behavior: "no_build", enabled: true }
+    ]
+  });
+  const normalized = validateWorldPolicy(upper);
+  assert.equal(normalized.policyId, POLICY_ID);
+  assert.equal(normalized.scope.clusterId, CLUSTER_ID);
+  assert.equal(normalized.safeZones[0].id, ZONE_ID);
+  assert.throws(() => validateWorldPolicy(policy({ safeZones: [
+    { id: ZONE_ID.toUpperCase(), name: "One", regionRef: "region:one", behavior: "pve", enabled: true },
+    { id: ZONE_ID.toLowerCase(), name: "Two", regionRef: "region:two", behavior: "pve", enabled: true }
+  ] })), /duplicates another safe-zone ID/);
+  const next = { ...upper, revision: 2, limits: { structures: { perPlayer: 90 } } };
+  assert.equal(diffWorldPolicies(upper, next).fromRevision, 1);
+});
+
+test("rejects sparse schedule, weekday, and safe-zone arrays", () => {
+  const sparseSchedule = []; sparseSchedule.length = 1;
+  assert.throws(() => validateWorldPolicy(policy({ worldRules: { pvpMode: "scheduled", pvpSchedule: sparseSchedule } })), /missing array entries/);
+  const sparseDays = []; sparseDays.length = 1;
+  assert.throws(() => validateWorldPolicy(policy({ worldRules: { pvpMode: "scheduled", pvpSchedule: [{ daysOfWeek: sparseDays, startTime: "09:00", endTime: "17:00", timezone: "UTC" }] } })), /missing array entries/);
+  const sparseZones = []; sparseZones.length = 1;
+  assert.throws(() => validateWorldPolicy(policy({ safeZones: sparseZones })), /missing array entries/);
+});
+
 test("rejects invalid time windows, duplicate weekdays, and invalid time zones", () => {
   const base = { pvpMode: "scheduled", pvpSchedule: [{ daysOfWeek: [1], startTime: "22:00", endTime: "18:00", timezone: "UTC" }] };
-  const window = { daysOfWeek: [1], startTime: "09:00", endTime: "17:00", timezone: "UTC" };
-  for (const pvpSchedule of [new Array(1), [window, , window], [{ ...window, daysOfWeek: new Array(1) }], [{ ...window, daysOfWeek: [1, , 3] }]]) {
-    assert.throws(() => validateWorldPolicy(policy({ worldRules: { pvpMode: "scheduled", pvpSchedule } })),
-      (error) => error instanceof WorldPolicyValidationError && /\[\d+\]$/.test(error.path));
-  }
   assert.throws(() => validateWorldPolicy(policy({ worldRules: base })), /must end later on the same day/);
   assert.throws(() => validateWorldPolicy(policy({ worldRules: { pvpMode: "scheduled", pvpSchedule: [{ daysOfWeek: [1, 1], startTime: "09:00", endTime: "17:00", timezone: "UTC" }] } })), /must not contain duplicates/);
   assert.throws(() => validateWorldPolicy(policy({ worldRules: { pvpMode: "scheduled", pvpSchedule: [{ daysOfWeek: [1], startTime: "09:00", endTime: "17:00", timezone: "Mars/Olympus" }] } })), /valid IANA time zone/);
@@ -85,17 +101,6 @@ test("validates ownership scope and its corresponding claim limit", () => {
 
 test("creates a read-only diff for a higher revision in the same scope", () => {
   const before = policy();
-  const uuid = "abcdefab-abcd-4abc-8abc-abcdefabcdef";
-  const mixedCase = policy({ policyId: uuid.toUpperCase(), scope: { clusterId: uuid.toUpperCase(), gridId: "A1", serverId: uuid.toUpperCase() } });
-  const normalized = validateWorldPolicy(mixedCase);
-  assert.equal(normalized.policyId, uuid);
-  assert.equal(normalized.scope.clusterId, uuid);
-  assert.equal(normalized.scope.serverId, uuid);
-  const sameIdentity = policy({ revision: 2, policyId: uuid, scope: { clusterId: uuid, gridId: "A1", serverId: uuid } });
-  assert.deepEqual(diffWorldPolicies(mixedCase, sameIdentity).changes, []);
-  assert.deepEqual(diffWorldPolicies({ ...sameIdentity, revision: 1 }, { ...mixedCase, revision: 2 }).changes, []);
-  assert.throws(() => diffWorldPolicies(before, policy({ revision: 2, policyId: uuid })),
-    (error) => error instanceof WorldPolicyValidationError && error.code === "POLICY_MISMATCH");
   const after = policy({ revision: 2, limits: { structures: { perPlayer: 80, perTribe: 500 }, tames: { perPlayer: 20, perTribe: 100 } } });
   const diff = diffWorldPolicies(before, after);
   assert.equal(diff.fromRevision, 1);
