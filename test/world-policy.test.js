@@ -3,10 +3,10 @@ import test from "node:test";
 
 import { diffWorldPolicies, validateWorldPolicy, WorldPolicyValidationError } from "../src/world-policy.js";
 
-const POLICY_ID = "11111111-1111-4111-8111-111111111111";
-const CLUSTER_ID = "22222222-2222-4222-8222-222222222222";
-const SERVER_ID = "33333333-3333-4333-8333-333333333333";
-const ZONE_ID = "44444444-4444-4444-8444-444444444444";
+const POLICY_ID = "a1111111-1111-4111-8111-111111111111";
+const CLUSTER_ID = "b2222222-2222-4222-8222-222222222222";
+const SERVER_ID = "c3333333-3333-4333-8333-333333333333";
+const ZONE_ID = "d4444444-4444-4444-8444-444444444444";
 
 function policy(overrides = {}) {
   return {
@@ -74,7 +74,7 @@ test("normalizes UUID casing for policy identity and duplicate checks", () => {
     { id: ZONE_ID.toUpperCase(), name: "One", regionRef: "region:one", behavior: "pve", enabled: true },
     { id: ZONE_ID.toLowerCase(), name: "Two", regionRef: "region:two", behavior: "pve", enabled: true }
   ] })), /duplicates another safe-zone ID/);
-  const next = { ...upper, revision: 2, limits: { structures: { perPlayer: 90 } } };
+  const next = policy({ revision: 2, limits: { structures: { perPlayer: 90 } } });
   assert.equal(diffWorldPolicies(upper, next).fromRevision, 1);
 });
 
