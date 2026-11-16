@@ -39,7 +39,7 @@ function string(value, path, { min = 1, max = 200 } = {}) {
 function uuid(value, path) {
   const result = string(value, path, { min: 1, max: 36 });
   if (!UUID.test(result)) fail(path + " must be a UUID", path, "INVALID_UUID");
-  return result;
+  return result.toLowerCase();
 }
 
 function integer(value, path, min = 1, max = MAX_LIMIT) {
@@ -82,13 +82,13 @@ function validateSchedule(value, path) {
   if (!Array.isArray(value) || value.length === 0 || value.length > 64) {
     fail(path + " must be a non-empty array with at most 64 windows", path);
   }
-  return Object.freeze(value.map((entry, index) => {
+  return Object.freeze(Array.from(value, (entry, index) => {
     const entryPath = path + "[" + index + "]";
     object(entry, entryPath, ["daysOfWeek", "startTime", "endTime", "timezone"], ["daysOfWeek", "startTime", "endTime", "timezone"]);
     if (!Array.isArray(entry.daysOfWeek) || entry.daysOfWeek.length === 0 || entry.daysOfWeek.length > 7) {
       fail(entryPath + ".daysOfWeek must contain one to seven weekdays", entryPath + ".daysOfWeek");
     }
-    const days = entry.daysOfWeek.map((day, dayIndex) => integer(day, entryPath + ".daysOfWeek[" + dayIndex + "]", 0, 6));
+    const days = Array.from(entry.daysOfWeek, (day, dayIndex) => integer(day, entryPath + ".daysOfWeek[" + dayIndex + "]", 0, 6));
     if (new Set(days).size !== days.length) fail(entryPath + ".daysOfWeek must not contain duplicates", entryPath + ".daysOfWeek");
     const startTime = validateTime(entry.startTime, entryPath + ".startTime");
     const endTime = validateTime(entry.endTime, entryPath + ".endTime");
@@ -117,7 +117,7 @@ function validateWorldRules(value) {
 function validateSafeZones(value) {
   if (!Array.isArray(value) || value.length > 500) fail("safeZones must be an array with at most 500 entries", "safeZones");
   const ids = new Set();
-  return Object.freeze(value.map((entry, index) => {
+  return Object.freeze(Array.from(value, (entry, index) => {
     const path = "safeZones[" + index + "]";
     object(entry, path, ["id", "name", "regionRef", "behavior", "enabled"], ["id", "name", "regionRef", "behavior", "enabled"]);
     const id = uuid(entry.id, path + ".id");
